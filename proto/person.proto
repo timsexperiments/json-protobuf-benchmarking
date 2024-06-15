@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package timsexperiments.jsonpb.benchmarking;
+
+option go_package = "github.com/timsexperiments/json-protobuf-benchmarking/internal/pb";
+
+// A representaion of a person.
+message Person {
+    // The name of the person.
+    string name = 1;
+    // The age of the person.
+    int32 age = 2;
+    // The person's email.
+    string email = 3;
+    // The person's hobbies.
+    repeated string hobbies = 4;
+}
