@@ -17,7 +17,7 @@ func (s *PbSerializer[M]) Serialize(data M) ([]byte, error) {
 }
 
 func (s *PbSerializer[M]) Deserialize(data []byte) (*M, error) {
-	message := s.message
+	message := proto.Clone(s.message).(M)
 	err := proto.Unmarshal(data, message)
 	if err != nil {
 		return nil, err
