@@ -3,13 +3,18 @@ package args
 import (
 	"flag"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
-var Limit int
+var (
+	Limit    int = 1_000_000
+	PoolSize int
+)
 
 func Parse() error {
+	flag.IntVar(&PoolSize, "p", runtime.NumCPU(), "Maximum number of parallel workers")
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {

@@ -3,8 +3,10 @@ package exercise
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/timsexperiments/json-protobuf-benchmarking/internal/args"
 	"github.com/timsexperiments/json-protobuf-benchmarking/internal/serialize"
 )
 
@@ -23,23 +25,61 @@ func (e *Exerciser[T]) WithLimit(limit int) *Exerciser[T] {
 }
 
 func (e *Exerciser[T]) RunExercise(data T) (*ExerciseStats, error) {
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	workersAvailable := make(chan struct{}, args.PoolSize)
+	errors := make(chan error, 1)
+
+	for range args.PoolSize {
+		workersAvailable <- struct{}{}
+	}
+
 	stats := createExerciseStats()
 	for range e.limit {
-		startDeserialization := time.Now()
-		serializedData, err := e.serializer.Serialize(data)
-		if err != nil {
-			return nil, fmt.Errorf("unable to serialize data: %w", err)
-		}
-		stats.addBytes(len(serializedData))
+		<-workersAvailable
+		wg.Add(1)
+		go func(data T) {
+			defer wg.Done()
+			defer func() {
+				workersAvailable <- struct{}{}
+			}()
 
-		stats.deserializationTime = append(stats.deserializationTime, time.Since(startDeserialization))
-		startSerialization := time.Now()
-		_, err = e.serializer.Deserialize(serializedData)
-		if err != nil {
-			return nil, fmt.Errorf("unable to deserialize data: %w", err)
-		}
-		stats.serializationTime = append(stats.serializationTime, time.Since(startSerialization))
+			startDeserialization := time.Now()
+			serializedData, err := e.serializer.Serialize(data)
+			if err != nil {
+				if len(errors) == 0 {
+					errors <- fmt.Errorf("unable to serialize data: %w", err)
+				}
+				return
+			}
+			serializationDuration := time.Since(startDeserialization)
+
+			startSerialization := time.Now()
+			_, err = e.serializer.Deserialize(serializedData)
+			if err != nil {
+				if len(errors) == 0 {
+					errors <- fmt.Errorf("unable to deserialize data: %w", err)
+				}
+				return
+			}
+			deserializationDuration := time.Since(startSerialization)
+
+			mu.Lock()
+			stats.addBytes(len(serializedData))
+			stats.serializationTime = append(stats.serializationTime, serializationDuration)
+			stats.deserializationTime = append(stats.deserializationTime, deserializationDuration)
+			mu.Unlock()
+		}(data)
 	}
+
+	wg.Wait()
+	close(workersAvailable)
+	close(errors)
+
+	if len(errors) > 0 {
+		return nil, <-errors
+	}
+
 	return stats, nil
 }
 
@@ -95,7 +135,9 @@ func (stats *ExerciseStats) addBytes(totalBytes int) {
 
 func (stats *ExerciseStats) String() string {
 	var buffer bytes.Buffer
-	buffer.WriteString("Total Execution Time: ")
+	buffer.WriteString("Total Operations: ")
+	buffer.WriteString(fmt.Sprintf("%d", len(stats.serializationTime)))
+	buffer.WriteString("\n\nTotal Execution Time: ")
 	buffer.WriteString(stats.TotalTime().String())
 	buffer.WriteString("\n\nSerialization Info:")
 	buffer.WriteString("\nSerialization Time: ")

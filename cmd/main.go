@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/timsexperiments/json-protobuf-benchmarking/internal/args"
 	"github.com/timsexperiments/json-protobuf-benchmarking/internal/exercise"
@@ -11,6 +12,7 @@ import (
 )
 
 func main() {
+	startTime := time.Now()
 	err := args.Parse()
 	if err != nil {
 		panic(err)
@@ -42,4 +44,5 @@ func main() {
 	fmt.Println("============== START PB INFO ================")
 	fmt.Println(pbStats)
 	fmt.Println("============== END PB INFO ================")
+	fmt.Printf("Completed in %v\n", time.Since(startTime))
 }
