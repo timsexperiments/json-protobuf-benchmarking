@@ -1,3 +1,5 @@
-# Generated code outputs
-internal/pb/*
+# Generated protobuf outputs
+*.pb.go
+
+# Build output
 bin/
