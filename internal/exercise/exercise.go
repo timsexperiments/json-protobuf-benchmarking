@@ -146,11 +146,11 @@ func (stats *ExerciseStats) String() string {
 	buffer.WriteString(stats.AverageSerializationTime().String())
 	buffer.WriteString("\nTotal Serialization Bytes: ")
 	buffer.WriteString(formatBytes(uint64(stats.totalBytes)))
-	buffer.WriteString("\n\nSerialization Info:")
+	buffer.WriteString("\n\nDeserialization Info:")
 	buffer.WriteString("\nDeserialization Time: ")
 	buffer.WriteString(stats.DeserializationTime().String())
 	buffer.WriteString("\nAverage Deserialization Time: ")
-	buffer.WriteString(stats.DeserializationTime().String())
+	buffer.WriteString(stats.AverageDeserializationTime().String())
 	return buffer.String()
 }
 
@@ -161,7 +161,7 @@ func formatBytes(bytes uint64) string {
 		GB
 		TB
 		PB
-		EB // Exabyte (for completeness)
+		EB
 	)
 
 	switch {
